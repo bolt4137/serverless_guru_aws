@@ -1,0 +1,83 @@
+service: serverless-crud-api
+
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: nodejs18.x
+  stage: ${opt:stage, 'dev'}
+  region: ${opt:region, 'us-east-1'}
+  environment:
+    ITEMS_TABLE: ${self:service}-items-${self:provider.stage}
+  iamRoleStatements:
+    - Effect: Allow
+      Action:
+        - dynamodb:Query
+        - dynamodb:Scan
+        - dynamodb:GetItem
+        - dynamodb:PutItem
+        - dynamodb:UpdateItem
+        - dynamodb:DeleteItem
+      Resource: !GetAtt ItemsTable.Arn
+
+functions:
+  createItem:
+    handler: src/functions/create/handler.create
+    events:
+      - http:
+          path: items
+          method: post
+          cors: true
+  
+  getItem:
+    handler: src/functions/read/handler.get
+    events:
+      - http:
+          path: items/{id}
+          method: get
+          cors: true
+  
+  listItems:
+    handler: src/functions/list/handler.list
+    events:
+      - http:
+          path: items
+          method: get
+          cors: true
+  
+  updateItem:
+    handler: src/functions/update/handler.update
+    events:
+      - http:
+          path: items/{id}
+          method: put
+          cors: true
+  
+  deleteItem:
+    handler: src/functions/delete/handler.delete
+    events:
+      - http:
+          path: items/{id}
+          method: delete
+          cors: true
+
+resources:
+  Resources:
+    ItemsTable:
+      Type: AWS::DynamoDB::Table
+      Properties:
+        TableName: ${self:provider.environment.ITEMS_TABLE}
+        BillingMode: PAY_PER_REQUEST
+        AttributeDefinitions:
+          - AttributeName: id
+            AttributeType: S
+        KeySchema:
+          - AttributeName: id
+            KeyType: HASH
+
+plugins:
+  - serverless-offline
+
+custom:
+  serverless-offline:
+    httpPort: 3000
